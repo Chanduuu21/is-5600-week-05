@@ -1,5 +1,44 @@
 const fs = require('fs').promises
 const path = require('path')
+const cuid = require('cuid')
+const db = require('./db')
+
+// Define our Product Model
+const Product = db.model('Product', {
+  _id: { type: String, default: cuid },
+  description: { type: String },
+  alt_description: { type: String },
+  likes: { type: Number, required: true },
+  urls: {
+    regular: { type: String, required: true },
+    small: { type: String, required: true },
+    thumb: { type: String, required: true },
+  },
+  links: {
+    self: { type: String, required: true },
+    html: { type: String, required: true },
+  },
+  user: {
+    id: { type: String, required: true },
+    first_name: { type: String, required: true },
+    last_name: { type: String },
+    portfolio_url: { type: String },
+    username: { type: String, required: true },
+  },
+  tags: [{
+    title: { type: String, required: true },
+  }],
+})
+
+/**
+ * Create a new product
+ * @param {Object} product
+ * @returns {Promise<Object>}
+ */
+async function create (fields) {
+  const product = await new Product(fields).save()
+  return product
+}
 
 const productsFile = path.join(__dirname, 'data/full-products.json')
 
@@ -9,19 +48,23 @@ const productsFile = path.join(__dirname, 'data/full-products.json')
  * @returns 
  */
 async function list(options = {}) {
+  const { offset = 0, limit = 25, tag } = options
 
-  const { offset = 0, limit = 25, tag } = options;
-
-  const data = await fs.readFile(productsFile)
-  return JSON.parse(data)
-    .filter(product => {
-      if (!tag) {
-        return product
+  // Use a ternary statement to create the query object. Then pass
+  // the query object to Mongoose to filter the products
+  const query = tag ? {
+    tags: {
+      $elemMatch: {
+        title: tag
       }
+    }
+  } : {}
+  const products = await Product.find(query)
+    .sort({ _id: 1 })
+    .skip(offset)
+    .limit(limit)
 
-      return product.tags.find(({ title }) => title == tag)
-    })
-    .slice(offset, offset + limit) // Slice the products
+  return products
 }
 
 /**
@@ -45,5 +88,6 @@ async function get(id) {
 
 module.exports = {
   list,
+    create,
   get
 }

@@ -22,3 +22,7 @@ app.post('/products', api.createProduct)
 // Boot the server
 app.listen(port, () => console.log(`Server listening on port ${port}`))
 
+21
+
+app.get('/orders', api.listOrders)
+app.post('/orders', api.createOrder)
